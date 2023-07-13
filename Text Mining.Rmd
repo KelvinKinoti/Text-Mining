@@ -1,0 +1,135 @@
+---
+title: 'Text Mining'
+output: word_document
+date: "2023-04-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE, warning = FALSE)
+```
+
+
+## Solution 1
+```{r}
+setwd("C:\\Users\\user\\Documents\\HW6")
+library(jsonlite)
+library(tm)
+library(SnowballC)
+
+newsgroups <- fromJSON("newsgroups.json")
+# Extract content field
+newsgroups_text <- unlist(lapply(newsgroups$content, paste, collapse = " "))
+# Create a Corpus
+newsgroups_corpus <- Corpus(VectorSource(newsgroups_text))
+# Define custom function for text pre-processing
+my_preprocessor <- function(text) {
+  # Convert text to lowercase
+  text <- tolower(text)
+  # Remove punctuation
+  text <- removePunctuation(text)
+  # Remove numbers
+  text <- removeNumbers(text)
+  # Remove stopwords
+  text <- removeWords(text, stopwords("english"))
+  # Stem words
+  text <- stemDocument(text)
+  return(text)
+}
+
+## Corpus with pre-processor
+newsgroups_corpus <- tm_map (newsgroups_corpus,my_preprocessor)
+# Create a document-term matrix
+dtm <- DocumentTermMatrix(newsgroups_corpus)
+
+# Create a term-document matrix
+tdm <- TermDocumentMatrix(newsgroups_corpus)
+
+```
+
+## Solution 2
+```{r}
+## Solution 2
+# Load required packages
+library(topicmodels)
+
+# Set number of topics
+num_topics <- 4
+
+# Set the seed for reproducibility
+set.seed(123)
+
+# Fit the LDA model
+library(topicmodels)
+lda_model <- LDA(dtm, k = 4)
+
+# Get the top 5 terms for each topic
+top_terms <- terms(lda_model, 5)
+top_terms
+
+
+```
+
+
+
+## Solutiom 3
+```{r}
+## Sentiment Analysis
+dtm_m<-as.matrix(tdm)
+# Sort by descearing value of frequency
+dtm_v <- sort(rowSums(dtm_m),decreasing=TRUE)
+dtm_d <- data.frame(word = names(dtm_v),freq=dtm_v)
+#  5 most frequent words
+head(dtm_d, 5)
+# Plot the most frequent words
+barplot(dtm_d[1:5,]$freq, las = 2, names.arg = dtm_d[1:5,]$word,
+        col ="lightgreen", main ="Top 5 most frequent words",
+        ylab = "Word frequencies")
+```
+
+
+## Solution 4
+```{r}
+library(udpipe)
+library(word2vec)
+library(text2vec)
+library(text)
+
+# Create CBOW model
+cbow_model <- word2vec(
+  newsgroups_text,
+  type = "cbow",
+  dim = 20,
+  iter = 20,
+  min_count = 1
+)
+# Find top 5 terms nearest to "car" and "man"
+near_can<-predict(cbow_model,"can",5,type = "nearest");near_can
+near_man<-predict(cbow_model,"man",5,type = "nearest");near_man
+
+# Print top 5 terms for each word
+cat("Top 5 terms nearest to 'car': ", paste(near_can, collapse = ", "), "\n")
+cat("Top 5 terms nearest to 'man': ", paste(near_man, collapse = ", "), "\n")
+
+```
+
+## Solution 5
+```{r}
+# Create skip-gram model
+skipgram_model <- word2vec(
+  newsgroups_text,
+  type = "skip-gram",
+  dim = 20,
+  iter = 20,
+  min_count = 1
+)
+# Find top 5 terms nearest to "religion" and "adult"
+top_n <- 5
+near_religion <- predict(skipgram_model, "religion",5,type="nearest")
+near_adult <- predict(skipgram_model, "adult",5,type="nearest")
+
+# Print top 5 terms for each word
+cat("Top 5 terms nearest to 'religion': ", paste(near_religion, collapse = ", "), "\n")
+cat("Top 5 terms nearest to 'adult': ", paste(near_adult, collapse = ", "), "\n")
+
+```
+
